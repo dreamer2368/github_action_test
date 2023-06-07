@@ -8,11 +8,13 @@ on:
 
 jobs:
   dummy-test:
+    runs-on: ubuntu-latest
+    name: "dummy test"
     steps:
       - name: dummy test command
         run: echo "CI dummy-test"
-  docker-image:
-    uses: ./.github/workflows/docker.yaml
+  # docker-image:
+  #   uses: ./.github/workflows/docker.yaml
     #  secrets:
     #    DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
     #    DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
