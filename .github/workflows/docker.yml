@@ -23,7 +23,7 @@ jobs:
       - name: DockerPATH configuration
         run: echo "DOCKERPATH=$DOCKERPATH"
       - name: DockerPATH - check if files in docker path changed
-        if: contains(steps.files.outputs.all,env.DOCKERPATH)
+        if: contains(steps.files.outputs.all,env.DOCKERPATH) || contains(steps.files.outputs.all,'docker.yml')
         run: |
           echo "CI container needs rebuilding..."
           echo "CI_NEEDS_REBUILD=true" >> $GITHUB_ENV
@@ -44,7 +44,7 @@ jobs:
         if: env.CI_NEEDS_REBUILD
         uses: docker/metadata-action@v4
         with:
-          images: dreamer2368/librom_env
+          images: dreamer2368/github_action_test
           tags: type=sha
           flavor: latest=true
       - name: Build Container motd
