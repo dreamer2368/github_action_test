@@ -6,12 +6,46 @@ on:
         required: true
       DOCKERHUB_TOKEN:
         required: true
+
+env:
+  REGISTRY: ghcr.io
+  # github.repository as <account>/<repo>
+  IMAGE_NAME: dreamer2368/github_action_test
+  DOCKERPATH: docker
+
 jobs:
+  ghcr:
+    runs-on: ubuntu-latest
+    name: "github container registry"
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+    - name: Echo github actor
+      run: echo "github.actor= ${{ github.actor }}"
+    - uses: Ana06/get-changed-files@v2.2.0       
+      id: files
+    - name: DockerPATH - check if files in docker path changed
+      if: contains(steps.files.outputs.all,env.DOCKERPATH) || contains(steps.files.outputs.all,'docker.yml')
+      run: |
+        echo "CI container needs rebuilding..."
+        echo "CI_NEEDS_REBUILD=true" >> $GITHUB_ENV
+    - name: Log into registry ${{ env.REGISTRY }}
+      if: env.CI_NEEDS_REBUILD
+      uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: build docker image
+      if: env.CI_NEEDS_REBUILD
+      run: |
+        echo "container tag= ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+        docker build --build-arg njobs=2 --file ${{ env.DOCKERPATH }}/Dockerfile --tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest .
+    - name: push docker image
+      run: docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
   docker-ci:
     runs-on: ubuntu-latest
     name: "docker env"
-    env:
-      DOCKERPATH: docker
     steps:
       - name: test command
         run: echo "docker-ci command"
