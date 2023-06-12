@@ -36,13 +36,38 @@ jobs:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
-    - name: build docker image
+    # - name: build docker image
+    #   if: env.CI_NEEDS_REBUILD
+    #   run: |
+    #     echo "container tag= ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+    #     docker build --build-arg njobs=2 --file ${{ env.DOCKERPATH }}/Dockerfile --tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest .
+    # - name: push docker image
+    #   run: docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+    - name: Extract metadata (tags, labels) for Docker
+      id: meta
+      if: env.CI_NEEDS_REBUILD
+      uses: docker/metadata-action@v4
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: type=sha
+        flavor: latest=true
+    - name: Build Container motd
       if: env.CI_NEEDS_REBUILD
       run: |
-        echo "container tag= ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
-        docker build --build-arg njobs=2 --file ${{ env.DOCKERPATH }}/Dockerfile --tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest .
-    - name: push docker image
-      run: docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+        echo "#!/bin/bash" > ${{env.DOCKERPATH}}/motd.sh
+        echo "echo --------------------------" >> ${{env.DOCKERPATH}}/motd.sh
+        echo "echo TPS/CI Development Container"  >> ${{env.DOCKERPATH}}/motd.sh
+        echo "echo \"Revision: `echo ${GITHUB_SHA} | cut -c1-8`\"" >> ${{env.DOCKERPATH}}/motd.sh
+        echo "echo --------------------------" >> ${{env.DOCKERPATH}}/motd.sh
+        chmod 755 ${{env.DOCKERPATH}}/motd.sh
+        cat ${{env.DOCKERPATH}}/motd.sh
+    - name: Docker Image - Build and push
+      if: env.CI_NEEDS_REBUILD
+      uses: docker/build-push-action@v3
+      with:
+        push: true
+        context: ${{ env.DOCKERPATH }}
+        tags: ${{ steps.meta.outputs.tags }}
   docker-ci:
     runs-on: ubuntu-latest
     name: "docker env"
